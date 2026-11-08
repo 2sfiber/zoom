@@ -113,11 +113,15 @@ class MainWindow(QMainWindow):
         self.netlog_path = str(Path(get_user_data_dir()).parent / "network_log.txt")
         self.downloader = None
         self.signals = LogSignals()
+
+        # إنشاء عناصر الواجهة أولاً، ومنها self.progress و self.log_box
+        self._build_ui()
+
+        # ربط الإشارات بعد إنشاء عناصر الواجهة
         self.signals.log.connect(self.append_log)
         self.signals.progress.connect(self.progress.setValue)
         self.signals.finished.connect(self.on_finished)
 
-        self._build_ui()
         self.setStyleSheet(APP_QSS)
 
         # حركة ظهور تدريجية عند فتح النافذة
