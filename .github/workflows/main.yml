@@ -1,0 +1,53 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: zoom-downloader
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Install Playwright Chromium into project folder
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}\zoom-downloader\ms-playwright
+        run: python -m playwright install chromium
+
+      - name: Build EXE with PyInstaller
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}\zoom-downloader\ms-playwright
+        run: python -m PyInstaller ZoomDownloader.spec --noconfirm
+
+      - name: Bundle Chromium and ffmpeg
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse -Force ms-playwright dist\ZoomDownloader\ms-playwright
+          Invoke-WebRequest -Uri 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip' -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-tmp -Force
+          Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffmpeg.exe | Select-Object -First 1).FullName dist\ZoomDownloader\ffmpeg.exe
+
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=1.0.0 installer\setup.nsi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZoomDownloader-Setup
+          path: zoom-downloader/installer-output/ZoomDownloader-Setup.exe
