@@ -8,9 +8,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: zoom-downloader
     steps:
       - uses: actions/checkout@v4
 
@@ -25,12 +22,10 @@ jobs:
 
       - name: Install Playwright Chromium into project folder
         env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}\zoom-downloader\ms-playwright
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
         run: python -m playwright install chromium
 
       - name: Build EXE with PyInstaller
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}\zoom-downloader\ms-playwright
         run: python -m PyInstaller ZoomDownloader.spec --noconfirm
 
       - name: Bundle Chromium and ffmpeg
@@ -45,9 +40,11 @@ jobs:
         shell: pwsh
         run: |
           choco install nsis -y --no-progress
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=1.0.0 installer\setup.nsi
+          New-Item -ItemType Directory -Force -Path installer-output | Out-Null
+          Set-Location installer
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=1.0.0 setup.nsi
 
       - uses: actions/upload-artifact@v4
         with:
           name: ZoomDownloader-Setup
-          path: zoom-downloader/installer-output/ZoomDownloader-Setup.exe
+          path: installer-output/ZoomDownloader-Setup.exe
